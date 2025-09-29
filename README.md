@@ -303,9 +303,9 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 ## 👨‍💻 Autor
 
-**Nicolás Andrés Villamizar**
+**Nicols Arango Vergara**
 - GitHub: [@NicoAV2311](https://github.com/NicoAV2311)
-- Universidad: [Tu Universidad]
+- Universidad: Universidad Catolica Luis Amigo
 - Materia: Ecuaciones Diferenciales
 
 ## 📞 Contacto
@@ -313,7 +313,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 Si tienes preguntas, sugerencias o encuentras algún problema:
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/NicoAV2311/final_ecuaciones_diferenciales/issues)
-- 📧 **Email**: [tu-email@universidad.edu]
 - 💬 **Discusiones**: [GitHub Discussions](https://github.com/NicoAV2311/final_ecuaciones_diferenciales/discussions)
 
 ---
