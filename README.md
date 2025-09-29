@@ -283,14 +283,6 @@ Las contribuciones son bienvenidas. Por favor:
 - [ ] Desarrollar interfaz web con visualizaciones interactivas
 - [ ] Implementar comparación automática de métodos
 
-## 📚 Referencias
-
-### Papers y Libros
-
-1. Butcher, J.C. (2016). *Numerical Methods for Ordinary Differential Equations*
-2. Goodfellow, I., Bengio, Y., & Courville, A. (2016). *Deep Learning*
-3. Press, W.H., et al. (2007). *Numerical Recipes: The Art of Scientific Computing*
-
 ### Recursos Adicionales
 
 - [Documentación NumPy](https://numpy.org/doc/)
