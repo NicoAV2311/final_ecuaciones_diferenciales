@@ -1,9 +1,13 @@
 """
-Proyecto mejorado: Red XOR + EDOs
-- Modo Manual: Euler / RK4 implementados a mano.
-- Modo Keras: entrenamiento usando tensorflow.keras.
-- Modo SciPy ODE: integra dW/dt = -eta * grad L(W) con solve_ivp.
-Guardar como: nn_edos_gui_improved.py
+Red Neuronal XOR con EDOs y Métodos de Integración Numérica
+===========================================================
+
+Proyecto mejorado que implementa una red neuronal para el problema XOR usando:
+- Modo Manual: Métodos Euler y RK4 implementados a mano.
+- Modo Keras: Entrenamiento usando tensorflow.keras.
+- Modo SciPy ODE: Integración de dW/dt = -eta * grad L(W) con solve_ivp.
+
+Incluye interfaz gráfica con PyQt5 y visualización de curva de pérdida.
 """
 
 import sys
@@ -15,14 +19,15 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget,
     QLabel, QTextEdit, QLineEdit, QHBoxLayout, QComboBox
 )
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 # Try to import optional libs (tensorflow, scipy). If missing, we'll notify user.
 try:
     import tensorflow as tf
-    from tensorflow.keras import Sequential
-    from tensorflow.keras.layers import Dense
+    from keras import Sequential
+    from keras.layers import Dense
     TF_OK = True
 except Exception as e:
     TF_OK = False
@@ -40,6 +45,9 @@ except Exception as e:
 # Implementación manual (SimpleNN) - métodos numéricos hechos a mano
 # --------------------------
 class SimpleNN:
+    """
+    Red neuronal simple para XOR con métodos de integración manuales (Euler, RK4).
+    """
     def __init__(self, eta: float = 0.1, epochs: int = 2000, method: str = "Euler") -> None:
         # XOR data
         self.X = np.array([[0,0],[0,1],[1,0],[1,1]], dtype=float)
@@ -66,13 +74,21 @@ class SimpleNN:
         return s * (1 - s)
 
     def forward(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Propagación hacia adelante de la red.
+        Returns: z1, a1, z2, a2
+        """
         z1 = self.X @ self.W1 + self.b1
         a1 = self._sigmoid(z1)
         z2 = a1 @ self.W2 + self.b2
         a2 = self._sigmoid(z2)
         return z1, a1, z2, a2
 
-    def compute_gradients(self):
+    def compute_gradients(self) -> Tuple[float, Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+        """
+        Calcula gradientes de la función de pérdida respecto a todos los parámetros.
+        Returns: loss, (dW1, db1, dW2, db2)
+        """
         z1, a1, z2, a2 = self.forward()
         loss = np.mean((self.y - a2) ** 2)
         dL_da2 = 2 * (a2 - self.y) / self.y.shape[0]
@@ -87,7 +103,11 @@ class SimpleNN:
         dL_db1 = np.sum(dL_dz1, axis=0, keepdims=True)
         return float(loss), (dL_dW1, dL_db1, dL_dW2, dL_db2)
 
-    def step_euler(self):
+    def step_euler(self) -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        Un paso de Euler explícito.
+        Returns: loss, gradW1, gradW2
+        """
         loss, grads = self.compute_gradients()
         dW1, db1, dW2, db2 = grads
         self.W1 -= self.eta * dW1
@@ -96,7 +116,11 @@ class SimpleNN:
         self.b2 -= self.eta * db2
         return loss, dW1, dW2
 
-    def step_rk4(self):
+    def step_rk4(self) -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        Un paso de Runge-Kutta 4 clásico.
+        Returns: loss, gradW1, gradW2
+        """
         # RK4 for the vector of parameters (applied componentwise using gradients)
         # k1
         loss1, grads1 = self.compute_gradients()
@@ -137,7 +161,10 @@ class SimpleNN:
 
         return loss1, dW1_1, dW2_1
 
-    def step(self):
+    def step(self) -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        Ejecuta un paso del método seleccionado.
+        """
         if self.method == "Euler":
             return self.step_euler()
         elif self.method == "RK4":
@@ -147,6 +174,10 @@ class SimpleNN:
             return self.step_euler()
 
     def train(self) -> np.ndarray:
+        """
+        Entrena la red usando el método seleccionado.
+        Returns: predicciones finales
+        """
         self.loss_history = []
         for epoch in range(self.epochs):
             loss, _, _ = self.step()
@@ -158,14 +189,18 @@ class SimpleNN:
 # --------------------------
 # Helpers for TensorFlow <-> flat vector conversion (for SciPy ODE mode)
 # --------------------------
-def get_flat_weights_from_keras(model: "tf.keras.Model") -> np.ndarray:
-    """Return flattened weights vector from a tf.keras model (numpy)."""
+def get_flat_weights_from_keras(model) -> np.ndarray:
+    """
+    Devuelve el vector de pesos aplanado de un modelo Keras.
+    """
     w_list = model.get_weights()
     flat = np.concatenate([w.flatten() for w in w_list]).astype(np.float64)
     return flat
 
-def set_flat_weights_to_keras(model: "tf.keras.Model", flat: np.ndarray):
-    """Set model weights from flat vector (numpy)."""
+def set_flat_weights_to_keras(model, flat: np.ndarray) -> None:
+    """
+    Asigna los pesos a un modelo Keras desde un vector plano.
+    """
     shapes = [w.shape for w in model.get_weights()]
     sizes = [int(np.prod(s)) for s in shapes]
     parts = []
@@ -183,6 +218,9 @@ def set_flat_weights_to_keras(model: "tf.keras.Model", flat: np.ndarray):
 # GUI
 # --------------------------
 class NNApp(QMainWindow):
+    """
+    Interfaz gráfica para comparar modos de entrenamiento de la red XOR.
+    """
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Red Neuronal + EDOs (Mejorada)")
@@ -237,22 +275,81 @@ class NNApp(QMainWindow):
         self.results.setReadOnly(True)
         layout.addWidget(self.results)
 
-        # Plotting
+
+        # Plotting: curva de pérdida
         self.figure = Figure(figsize=(6,3))
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
+
+        # Plotting: visualización de la red y pesos
+        self.nn_fig = Figure(figsize=(6,3))
+        self.nn_canvas = FigureCanvas(self.nn_fig)
+        layout.addWidget(self.nn_canvas)
 
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
 
         # internal state
-        self.manual_nn: Optional[SimpleNN] = None
+        self.manual_nn = None
         self.keras_model = None
-        self.keras_loss_history: List[float] = []
+        self.keras_loss_history = []
         self.scipy_solution = None
 
+    def draw_nn_weights(self, W1, b1, W2, b2, activations=None):
+        """
+        Dibuja la red neuronal y los pesos actuales.
+        W1: (2,3), b1: (1,3), W2: (3,1), b2: (1,1)
+        activations: opcional, lista de activaciones por nodo
+        """
+        self.nn_fig.clear()
+        ax = self.nn_fig.add_subplot(111)
+        ax.axis('off')
+
+        # Coordenadas de nodos
+        x_in, y_in = [0.1]*2, [0.3, 0.7]
+        x_hid, y_hid = [0.5]*3, [0.2, 0.5, 0.8]
+        x_out, y_out = [0.9], [0.5]
+
+        # Nodos
+        for i in range(2):
+            ax.plot(x_in[i], y_in[i], 'o', color='skyblue', markersize=18)
+            ax.text(x_in[i]-0.05, y_in[i], f'X{i+1}', fontsize=12)
+        for j in range(3):
+            color = 'orange'
+            if activations is not None and len(activations)>0:
+                val = activations[0][j]
+                color = plt.get_cmap('Reds')(val)
+            ax.plot(x_hid[j], y_hid[j], 'o', color=color, markersize=18)
+            ax.text(x_hid[j], y_hid[j]+0.07, f'H{j+1}', fontsize=12)
+        ax.plot(x_out[0], y_out[0], 'o', color='lime', markersize=18)
+        ax.text(x_out[0]+0.02, y_out[0], 'Y', fontsize=12)
+
+        # Conexiones input-hidden
+        for i in range(2):
+            for j in range(3):
+                w = W1[i,j]
+                lw = 2 + 6*abs(w)/np.max(np.abs(W1)) if np.max(np.abs(W1))>0 else 2
+                color = 'red' if w<0 else 'green'
+                ax.plot([x_in[i], x_hid[j]], [y_in[i], y_hid[j]], '-', color=color, linewidth=lw, alpha=0.7)
+                ax.text((x_in[i]+x_hid[j])/2, (y_in[i]+y_hid[j])/2, f'{w:.2f}', fontsize=8)
+
+        # Conexiones hidden-output
+        for j in range(3):
+            w = W2[j,0]
+            lw = 2 + 6*abs(w)/np.max(np.abs(W2)) if np.max(np.abs(W2))>0 else 2
+            color = 'red' if w<0 else 'green'
+            ax.plot([x_hid[j], x_out[0]], [y_hid[j], y_out[0]], '-', color=color, linewidth=lw, alpha=0.7)
+            ax.text((x_hid[j]+x_out[0])/2, (y_hid[j]+y_out[0])/2, f'{w:.2f}', fontsize=8)
+
+        ax.set_xlim(0,1)
+        ax.set_ylim(0,1)
+        self.nn_canvas.draw()
+
     def train_network(self) -> None:
+        """
+        Ejecuta el entrenamiento según el modo seleccionado.
+        """
         mode = self.mode_combo.currentText()
         try:
             eta = float(self.lr_input.text())
@@ -264,7 +361,15 @@ class NNApp(QMainWindow):
         if mode == "Manual":
             method = self.method_combo.currentText()
             self.manual_nn = SimpleNN(eta=eta, epochs=epochs, method=method)
-            outputs = self.manual_nn.train()
+            self.manual_nn.loss_history = []
+            # Visualización dinámica de pesos
+            for epoch in range(self.manual_nn.epochs):
+                loss, _, _ = self.manual_nn.step()
+                self.manual_nn.loss_history.append(float(loss))
+                # Dibuja red y pesos cada 50 épocas o en la última
+                if epoch % max(1, self.manual_nn.epochs//100) == 0 or epoch == self.manual_nn.epochs-1:
+                    self.draw_nn_weights(self.manual_nn.W1, self.manual_nn.b1, self.manual_nn.W2, self.manual_nn.b2)
+            outputs = self.manual_nn.forward()[3]
             preds = (outputs > 0.5).astype(int)
             txt = f"Manual mode ({method}) - Resultados finales:\n"
             for i in range(len(self.manual_nn.X)):
@@ -272,7 +377,7 @@ class NNApp(QMainWindow):
             txt += f"\nÚltima pérdida: {self.manual_nn.loss_history[-1]:.8f}\n"
             self.results.setText(txt)
 
-            # plot
+            # plot curva de pérdida
             self.figure.clear()
             ax = self.figure.add_subplot(111)
             ax.plot(self.manual_nn.loss_history, label=f"Manual {method}")
@@ -284,107 +389,122 @@ class NNApp(QMainWindow):
             self.canvas.draw()
 
         elif mode == "Keras":
-            if not TF_OK:
+            # Visualización de pesos no implementada para Keras por diferencias de API
+            if not TF_OK or tf is None:
                 self.results.setText("TensorFlow / Keras no está disponible en este entorno.")
                 return
-            # Build a small model and train with Keras (SGD) - we will keep sigmoid activations like manual
-            model = Sequential([Dense(3, input_shape=(2,), activation='sigmoid'), Dense(1, activation='sigmoid')])
-            opt = tf.keras.optimizers.SGD(learning_rate=eta)
-            model.compile(optimizer=opt, loss='mse', metrics=[])
-            # fit
-            history = model.fit(np.array([[0,0],[0,1],[1,0],[1,1]]), np.array([[0],[1],[1],[0]]),
-                                epochs=epochs, verbose=0)
-            self.keras_model = model
-            self.keras_loss_history = history.history['loss']
+            try:
+                # Defensive: check keras attribute
+                keras_mod = getattr(tf, "keras", None)
+                if keras_mod is None:
+                    self.results.setText("TensorFlow instalado, pero 'keras' no está disponible.")
+                    return
+                optimizers_mod = getattr(keras_mod, "optimizers", None)
+                if optimizers_mod is None:
+                    self.results.setText("TensorFlow instalado, pero 'keras.optimizers' no está disponible.")
+                    return
+                model = Sequential([Dense(3, input_shape=(2,), activation='sigmoid'), Dense(1, activation='sigmoid')])
+                opt = optimizers_mod.SGD(learning_rate=eta)
+                model.compile(optimizer=opt, loss='mse', metrics=[])
+                history = model.fit(np.array([[0,0],[0,1],[1,0],[1,1]]), np.array([[0],[1],[1],[0]]),
+                                    epochs=epochs, verbose='auto')
+                self.keras_model = model
+                self.keras_loss_history = history.history['loss']
 
-            preds = (model.predict(np.array([[0,0],[0,1],[1,0],[1,1]])) > 0.5).astype(int)
-            txt = f"Keras mode (SGD lr={eta}) - Resultados:\n"
-            for i, x in enumerate([[0,0],[0,1],[1,0],[1,1]]):
-                prob = model.predict(np.array([x]))[0,0]
-                txt += f"{x} -> pred: {int(preds[i,0])} (real {int(self.manual_nn.y[i,0]) if self.manual_nn else [0,1,1,0][i]}) [{prob:.3f}]\n"
-            txt += f"\nÚltima pérdida: {self.keras_loss_history[-1]:.8f}\n"
-            self.results.setText(txt)
+                preds = (model.predict(np.array([[0,0],[0,1],[1,0],[1,1]])) > 0.5).astype(int)
+                txt = f"Keras mode (SGD lr={eta}) - Resultados:\n"
+                for i, x in enumerate([[0,0],[0,1],[1,0],[1,1]]):
+                    prob = model.predict(np.array([x]))[0,0]
+                    txt += f"{x} -> pred: {int(preds[i,0])} (real {int(self.manual_nn.y[i,0]) if self.manual_nn else [0,1,1,0][i]}) [{prob:.3f}]\n"
+                txt += f"\nÚltima pérdida: {self.keras_loss_history[-1]:.8f}\n"
+                self.results.setText(txt)
 
-            # plot
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
-            ax.plot(self.keras_loss_history, label="Keras SGD")
-            ax.set_title("Pérdida (Keras SGD)")
-            ax.set_xlabel("Épocas")
-            ax.set_ylabel("MSE")
-            ax.legend()
-            ax.grid(True)
-            self.canvas.draw()
+                # plot
+                self.figure.clear()
+                ax = self.figure.add_subplot(111)
+                ax.plot(self.keras_loss_history, label="Keras SGD")
+                ax.set_title("Pérdida (Keras SGD)")
+                ax.set_xlabel("Épocas")
+                ax.set_ylabel("MSE")
+                ax.legend()
+                ax.grid(True)
+                self.canvas.draw()
+            except Exception as ex:
+                self.results.setText(f"Error ejecutando Keras: {ex}")
 
         elif mode == "SciPy ODE":
-            if not (TF_OK and SCIPY_OK):
+            # Visualización de pesos no implementada para SciPy ODE por diferencias de API
+            if not (TF_OK and SCIPY_OK) or tf is None or solve_ivp is None:
                 self.results.setText("Para SciPy ODE necesitas: scipy y tensorflow instalados.")
                 return
+            try:
+                keras_mod = getattr(tf, "keras", None)
+                if keras_mod is None:
+                    self.results.setText("TensorFlow instalado, pero 'keras' no está disponible.")
+                    return
+                model = Sequential([Dense(3, input_shape=(2,), activation='sigmoid'), Dense(1, activation='sigmoid')])
+                flat0 = get_flat_weights_from_keras(model)
+                X_train = np.array([[0,0],[0,1],[1,0],[1,1]], dtype=np.float64)
+                y_train = np.array([[0],[1],[1],[0]], dtype=np.float64)
 
-            # Build a Keras model to reuse structure and gradients computation
-            model = Sequential([Dense(3, input_shape=(2,), activation='sigmoid'), Dense(1, activation='sigmoid')])
-            # We will integrate weights as a flat vector
-            # initial flat weights
-            flat0 = get_flat_weights_from_keras(model)
+                def ode_fun(t, y_flat):
+                    set_flat_weights_to_keras(model, y_flat.astype(np.float32))
+                    GradientTape = getattr(tf, "GradientTape", None)
+                    convert_to_tensor = getattr(tf, "convert_to_tensor", None)
+                    reduce_mean = getattr(tf, "reduce_mean", None)
+                    square = getattr(tf, "square", None)
+                    if GradientTape is None or convert_to_tensor is None or reduce_mean is None or square is None:
+                        raise RuntimeError("TensorFlow no tiene los métodos necesarios para SciPy ODE.")
+                    with GradientTape() as tape:
+                        x_tf = convert_to_tensor(X_train, dtype=getattr(tf, "float32", None))
+                        y_tf = convert_to_tensor(y_train, dtype=getattr(tf, "float32", None))
+                        preds = model(x_tf, training=False)
+                        loss_tf = reduce_mean(square(y_tf - preds))
+                    grads = tape.gradient(loss_tf, model.trainable_weights)
+                    if grads is None:
+                        raise RuntimeError("No se pudieron calcular los gradientes con TensorFlow.")
+                    grad_flat = np.concatenate([g.numpy().flatten() for g in grads]).astype(np.float64)
+                    return (-eta * grad_flat)
 
-            # define ODE: dy/dt = -eta * grad(loss) where y is flat weights
-            X_train = np.array([[0,0],[0,1],[1,0],[1,1]], dtype=np.float64)
-            y_train = np.array([[0],[1],[1],[0]], dtype=np.float64)
+                t_span = (0.0, float(epochs))
+                sol = solve_ivp(ode_fun, t_span, flat0, method='RK45', rtol=1e-6, atol=1e-9, max_step=1.0)
+                self.scipy_solution = sol
 
-            def ode_fun(t, y_flat):
-                # set model weights
-                set_flat_weights_to_keras(model, y_flat.astype(np.float32))
-                # compute loss and gradients using TF
-                with tf.GradientTape() as tape:
-                    x_tf = tf.convert_to_tensor(X_train, dtype=tf.float32)
-                    y_tf = tf.convert_to_tensor(y_train, dtype=tf.float32)
-                    preds = model(x_tf, training=False)
-                    loss_tf = tf.reduce_mean(tf.square(y_tf - preds))
-                grads = tape.gradient(loss_tf, model.trainable_weights)
-                # flatten grads
-                grad_flat = np.concatenate([g.numpy().flatten() for g in grads]).astype(np.float64)
-                # dy/dt = -eta * grad_flat
-                return (-eta * grad_flat)
+                final_flat = sol.y[:, -1]
+                set_flat_weights_to_keras(model, final_flat.astype(np.float32))
+                preds = (model.predict(X_train) > 0.5).astype(int)
+                losses = []
+                for i_t, y_flat in enumerate(sol.y.T):
+                    set_flat_weights_to_keras(model, y_flat.astype(np.float32))
+                    preds_t = model.predict(X_train)
+                    losses.append(float(np.mean((y_train - preds_t) ** 2)))
 
-            # integrate from t=0..T where T = epochs (we interpret epochs as time units)
-            t_span = (0.0, float(epochs))
-            # choose solver (RK45 default)
-            sol = solve_ivp(ode_fun, t_span, flat0, method='RK45', rtol=1e-6, atol=1e-9, max_step=1.0)
-            self.scipy_solution = sol
+                txt = f"SciPy ODE mode (integrador RK45) - Resultados:\n"
+                for i, x in enumerate(X_train):
+                    prob = model.predict(np.array([x]))[0,0]
+                    txt += f"{x.tolist()} -> pred: {int(preds[i,0])} (real {int(y_train[i,0])}) [{prob:.3f}]\n"
+                txt += f"\nPérdida final (último paso): {losses[-1]:.8f}\n"
+                self.results.setText(txt)
 
-            # final weights -> set and predict
-            final_flat = sol.y[:, -1]
-            set_flat_weights_to_keras(model, final_flat.astype(np.float32))
-            preds = (model.predict(X_train) > 0.5).astype(int)
-            losses = []
-            # compute loss timeline by sampling solution at returned times
-            for i_t, y_flat in enumerate(sol.y.T):
-                set_flat_weights_to_keras(model, y_flat.astype(np.float32))
-                preds_t = model.predict(X_train)
-                losses.append(float(np.mean((y_train - preds_t) ** 2)))
-
-            txt = f"SciPy ODE mode (integrador RK45) - Resultados:\n"
-            for i, x in enumerate(X_train):
-                prob = model.predict(np.array([x]))[0,0]
-                txt += f"{x.tolist()} -> pred: {int(preds[i,0])} (real {int(y_train[i,0])}) [{prob:.3f}]\n"
-            txt += f"\nPérdida final (último paso): {losses[-1]:.8f}\n"
-            self.results.setText(txt)
-
-            # plot
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
-            ax.plot(sol.t, losses, label='Loss (SciPy solve_ivp)')
-            ax.set_title('Pérdida (SciPy ODE integration)')
-            ax.set_xlabel('Tiempo (epocas equivalentes)')
-            ax.set_ylabel('MSE')
-            ax.legend()
-            ax.grid(True)
-            self.canvas.draw()
+                self.figure.clear()
+                ax = self.figure.add_subplot(111)
+                ax.plot(sol.t, losses, label='Loss (SciPy solve_ivp)')
+                ax.set_title('Pérdida (SciPy ODE integration)')
+                ax.set_xlabel('Tiempo (epocas equivalentes)')
+                ax.set_ylabel('MSE')
+                ax.legend()
+                ax.grid(True)
+                self.canvas.draw()
+            except Exception as ex:
+                self.results.setText(f"Error ejecutando SciPy ODE: {ex}")
 
         else:
             self.results.setText("Modo no reconocido.")
 
     def one_step(self) -> None:
+        """
+        Ejecuta un paso manual (solo modo Manual).
+        """
         mode = self.mode_combo.currentText()
         if mode != "Manual":
             self.results.setText("El modo 'Un paso' está disponible solo en Modo Manual.")
@@ -421,6 +541,9 @@ class NNApp(QMainWindow):
         self.canvas.draw()
 
     def reset_network(self) -> None:
+        """
+        Reinicia el estado interno y la interfaz.
+        """
         # reset all internal objects
         self.manual_nn = None
         self.keras_model = None
@@ -436,6 +559,9 @@ class NNApp(QMainWindow):
 # Main
 # --------------------------
 if __name__ == "__main__":
+    """
+    Punto de entrada principal de la aplicación.
+    """
     app = QApplication(sys.argv)
     window = NNApp()
     window.show()
