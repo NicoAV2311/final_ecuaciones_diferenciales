@@ -2,6 +2,19 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
+# CSS personalizado para mejorar apariencia
+def local_css():
+    st.markdown("""
+        <style>
+        .main-title {color: #1f77b4; font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 1rem;}
+        .sidebar .sidebar-content {background: #f0f4f8;}
+        .result-box {background: #eaf6ff; border-radius: 10px; padding: 1rem; margin-bottom: 1rem;}
+        .stTabs [data-baseweb="tab"] {background: #eaf6ff; border-radius: 10px 10px 0 0;}
+        </style>
+    """, unsafe_allow_html=True)
+
+local_css()
+
 # --------------------------
 # Implementación manual (SimpleNN) - métodos numéricos hechos a mano
 # --------------------------
@@ -110,9 +123,10 @@ class SimpleNN:
 # Streamlit UI
 # --------------------------
 st.set_page_config(page_title="Red Neuronal XOR + EDOs", layout="wide")
-st.title("Red Neuronal XOR con Métodos Numéricos (Euler/RK4)")
+st.markdown('<div class="main-title">Red Neuronal XOR con Métodos Numéricos (Euler/RK4)</div>', unsafe_allow_html=True)
 
-with st.sidebar:
+col1, col2 = st.columns([1,2])
+with col1:
     st.header("Parámetros de entrenamiento")
     eta = st.number_input("Tasa de aprendizaje (η)", min_value=0.001, max_value=2.0, value=0.1, step=0.01)
     epochs = st.number_input("Épocas", min_value=1, max_value=20000, value=5000, step=100)
@@ -127,63 +141,71 @@ if 'nn' not in st.session_state or reset_btn:
     st.session_state.current_epoch = 0
     st.session_state.outputs = None
 
-if run_btn:
-    nn = SimpleNN(eta=eta, epochs=epochs, method=method)
-    N = 200
-    for i in range(0, epochs, update_freq):
-        block = min(update_freq, epochs - i)
-        for _ in range(block):
-            loss, _, _ = nn.step()
-            nn.loss_history.append(float(loss))
-        st.write(f"Época {i+block}/{epochs} - Loss: {loss:.8f}")
-        fig, ax = plt.subplots()
-        ax.plot(nn.loss_history[-N:], label=f"{method}")
-        ax.set_title("Curva de pérdida (últimas N)")
-        ax.set_xlabel("Épocas")
-        ax.set_ylabel("MSE")
-        ax.legend()
-        ax.grid(True)
-        st.pyplot(fig)
-    outputs = nn.forward()[3]
-    preds = (outputs > 0.5).astype(int)
-    st.subheader("Resultados finales")
-    for i in range(len(nn.X)):
-        st.write(f"{nn.X[i]} → pred: {int(preds[i][0])} (real {int(nn.y[i][0])}) [{outputs[i][0]:.3f}]")
-    st.write(f"Última pérdida: {nn.loss_history[-1]:.8f}")
-    st.session_state.nn = nn
-    st.session_state.loss_history = nn.loss_history
-    st.session_state.outputs = outputs
-
-if st.session_state.nn:
-    st.subheader("Visualización de la red y pesos")
-    nn = st.session_state.nn
-    W1, b1, W2, b2 = nn.W1, nn.b1, nn.W2, nn.b2
-    fig, ax = plt.subplots(figsize=(6,3))
-    ax.axis('off')
-    x_in, y_in = [0.1]*2, [0.3, 0.7]
-    x_hid, y_hid = [0.5]*3, [0.2, 0.5, 0.8]
-    x_out, y_out = [0.9], [0.5]
-    for i in range(2):
-        ax.plot(x_in[i], y_in[i], 'o', color='skyblue', markersize=18)
-        ax.text(x_in[i]-0.05, y_in[i], f'X{i+1}', fontsize=12)
-    for j in range(3):
-        ax.plot(x_hid[j], y_hid[j], 'o', color='orange', markersize=18)
-        ax.text(x_hid[j], y_hid[j]+0.07, f'H{j+1}', fontsize=12)
-    ax.plot(x_out[0], y_out[0], 'o', color='lime', markersize=18)
-    ax.text(x_out[0]+0.02, y_out[0], 'Y', fontsize=12)
-    for i in range(2):
-        for j in range(3):
-            w = W1[i,j]
-            lw = 2 + 6*abs(w)/np.max(np.abs(W1)) if np.max(np.abs(W1))>0 else 2
-            color = 'red' if w<0 else 'green'
-            ax.plot([x_in[i], x_hid[j]], [y_in[i], y_hid[j]], '-', color=color, linewidth=lw, alpha=0.7)
-            ax.text((x_in[i]+x_hid[j])/2, (y_in[i]+y_hid[j])/2, f'{w:.2f}', fontsize=8)
-    for j in range(3):
-        w = W2[j,0]
-        lw = 2 + 6*abs(w)/np.max(np.abs(W2)) if np.max(np.abs(W2))>0 else 2
-        color = 'red' if w<0 else 'green'
-        ax.plot([x_hid[j], x_out[0]], [y_hid[j], y_out[0]], '-', color=color, linewidth=lw, alpha=0.7)
-        ax.text((x_hid[j]+x_out[0])/2, (y_hid[j]+y_out[0])/2, f'{w:.2f}', fontsize=8)
-    ax.set_xlim(0,1)
-    ax.set_ylim(0,1)
-    st.pyplot(fig)
+with col2:
+    tabs = st.tabs(["Curva de pérdida", "Resultados finales", "Red y pesos"])
+    if run_btn:
+        nn = SimpleNN(eta=eta, epochs=epochs, method=method)
+        N = 200
+        for i in range(0, epochs, update_freq):
+            block = min(update_freq, epochs - i)
+            for _ in range(block):
+                loss, _, _ = nn.step()
+                nn.loss_history.append(float(loss))
+        with tabs[0]:
+            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+            fig, ax = plt.subplots()
+            ax.plot(nn.loss_history[-N:], label=f"{method}")
+            ax.set_title("Curva de pérdida (últimas N)")
+            ax.set_xlabel("Épocas")
+            ax.set_ylabel("MSE")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
+            st.markdown('</div>', unsafe_allow_html=True)
+        outputs = nn.forward()[3]
+        preds = (outputs > 0.5).astype(int)
+        with tabs[1]:
+            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+            st.subheader("Resultados finales")
+            for i in range(len(nn.X)):
+                st.write(f"{nn.X[i]} → pred: {int(preds[i][0])} (real {int(nn.y[i][0])}) [{outputs[i][0]:.3f}]")
+            st.write(f"Última pérdida: {nn.loss_history[-1]:.8f}")
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.session_state.nn = nn
+        st.session_state.loss_history = nn.loss_history
+        st.session_state.outputs = outputs
+    if st.session_state.nn:
+        nn = st.session_state.nn
+        W1, b1, W2, b2 = nn.W1, nn.b1, nn.W2, nn.b2
+        with tabs[2]:
+            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+            fig, ax = plt.subplots(figsize=(6,3))
+            ax.axis('off')
+            x_in, y_in = [0.1]*2, [0.3, 0.7]
+            x_hid, y_hid = [0.5]*3, [0.2, 0.5, 0.8]
+            x_out, y_out = [0.9], [0.5]
+            for i in range(2):
+                ax.plot(x_in[i], y_in[i], 'o', color='skyblue', markersize=18)
+                ax.text(x_in[i]-0.05, y_in[i], f'X{i+1}', fontsize=12)
+            for j in range(3):
+                ax.plot(x_hid[j], y_hid[j], 'o', color='orange', markersize=18)
+                ax.text(x_hid[j], y_hid[j]+0.07, f'H{j+1}', fontsize=12)
+            ax.plot(x_out[0], y_out[0], 'o', color='lime', markersize=18)
+            ax.text(x_out[0]+0.02, y_out[0], 'Y', fontsize=12)
+            for i in range(2):
+                for j in range(3):
+                    w = W1[i,j]
+                    lw = 2 + 6*abs(w)/np.max(np.abs(W1)) if np.max(np.abs(W1))>0 else 2
+                    color = 'red' if w<0 else 'green'
+                    ax.plot([x_in[i], x_hid[j]], [y_in[i], y_hid[j]], '-', color=color, linewidth=lw, alpha=0.7)
+                    ax.text((x_in[i]+x_hid[j])/2, (y_in[i]+y_hid[j])/2, f'{w:.2f}', fontsize=8)
+            for j in range(3):
+                w = W2[j,0]
+                lw = 2 + 6*abs(w)/np.max(np.abs(W2)) if np.max(np.abs(W2))>0 else 2
+                color = 'red' if w<0 else 'green'
+                ax.plot([x_hid[j], x_out[0]], [y_hid[j], y_out[0]], '-', color=color, linewidth=lw, alpha=0.7)
+                ax.text((x_hid[j]+x_out[0])/2, (y_hid[j]+y_out[0])/2, f'{w:.2f}', fontsize=8)
+            ax.set_xlim(0,1)
+            ax.set_ylim(0,1)
+            st.pyplot(fig)
+            st.markdown('</div>', unsafe_allow_html=True)

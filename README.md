@@ -309,3 +309,44 @@ Si tienes preguntas, sugerencias o encuentras algún problema:
 *Proyecto desarrollado como trabajo final para la materia de Ecuaciones Diferenciales*
 
 </div>
+
+## 🌐 Interfaz Web con Streamlit
+
+A partir de la versión 2025, el proyecto incluye una interfaz web interactiva desarrollada con **Streamlit**. Esta versión permite ejecutar y visualizar el entrenamiento de la red neuronal XOR directamente en el navegador, con una experiencia moderna y responsiva.
+
+### 🚀 Instalación y Ejecución de la App Web
+
+#### 1. Instalar Streamlit
+
+```bash
+pip install streamlit
+```
+
+#### 2. Ejecutar la aplicación web
+
+```bash
+streamlit run app_streamlit.py
+```
+
+> Si el comando `streamlit` no funciona, prueba:
+> ```bash
+> python -m streamlit run app_streamlit.py
+> ```
+
+#### 3. Acceder desde el navegador
+
+Por defecto, Streamlit abrirá la app en [http://localhost:8501](http://localhost:8501)
+
+### 🎨 Características Visuales
+- Parámetros de entrenamiento en panel lateral
+- Tabs para curva de pérdida, resultados finales y visualización de la red
+- Apariencia mejorada con CSS personalizado
+- Responsive y fácil de usar
+
+### 📦 Archivos relevantes
+- `app_streamlit.py`: Código principal de la app web
+- `requirements.txt`: Incluye `streamlit` como dependencia
+
+### 🖼️ Ejemplo visual
+
+![Streamlit Demo](https://streamlit.io/images/brand/streamlit-mark-color.png)
