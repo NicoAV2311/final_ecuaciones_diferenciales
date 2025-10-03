@@ -1,3 +1,17 @@
-numpy>=1.21.0
-matplotlib>=3.5.0
-PyQt5>=5.15.0
+###############################################################
+# requirements.txt - Dependencias para Red Neuronal XOR con EDOs
+#
+# Este archivo lista los paquetes necesarios y opcionales para
+# ejecutar el código principal (Tentativo final ecuaciones.py)
+# y su interfaz gráfica. Incluye comentarios para cada componente.
+###############################################################
+
+# --- Dependencias obligatorias ---
+numpy>=1.21.0         # Cálculo numérico y manejo de arrays
+matplotlib>=3.5.0     # Visualización de curvas de pérdida y red neuronal
+PyQt5>=5.15.0         # Interfaz gráfica (GUI)
+
+# --- Dependencias opcionales ---
+# Para modos avanzados de entrenamiento (Keras y SciPy ODE)
+tensorflow>=2.8.0     # Entrenamiento con Keras (modo opcional)
+scipy>=1.7.0          # Integración de EDOs con solve_ivp (modo opcional)

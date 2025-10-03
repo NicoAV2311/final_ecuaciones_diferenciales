@@ -28,7 +28,7 @@ Donde:
 | Método | Orden | Evaluaciones/Paso | Precisión | Descripción |
 |--------|-------|-------------------|-----------|-------------|
 | **Euler Explícito** | O(h) | 1 | Básica | Método más simple, rápido pero menos preciso |
-| **Runge-Kutta 2 (RK2)** | O(h²) | 2 | Media | Balance entre precisión y costo computacional |
+| **Runge-Kutta 4 (RK4)** | O(h⁴) | 4 | Alta | Método clásico de alta precisión |
 | **Runge-Kutta 4 (RK4)** | O(h⁴) | 4 | Alta | Método clásico de alta precisión |
 
 ### 📊 Fórmulas Matemáticas
@@ -38,12 +38,7 @@ Donde:
 W(t+h) = W(t) + h * f(t, W(t))
 ```
 
-#### Runge-Kutta 2 (Método del Punto Medio)
-```
-k₁ = h * f(t, W)
-k₂ = h * f(t + h/2, W + k₁/2)
-W(t+h) = W(t) + k₂
-```
+
 
 #### Runge-Kutta 4
 ```
@@ -76,14 +71,15 @@ Entrada (2) → Capa Oculta (3) → Salida (1)
 
 ## 🚀 Características
 
+
 ### ✨ Funcionalidades Principales
 
-- **Selección de Método**: Interfaz para elegir entre Euler, RK2, y RK4
-- **Entrenamiento Completo**: Optimización automática con el método seleccionado
-- **Modo Paso a Paso**: Análisis educativo de cada iteración
-- **Visualización en Tiempo Real**: Curvas de pérdida diferenciadas por color
-- **Análisis Comparativo**: Métricas de convergencia y estabilidad
-- **Interfaz Intuitiva**: GUI desarrollada en PyQt5
+- **Modos de Entrenamiento**: Manual (Euler/RK4), Keras (TensorFlow), SciPy ODE
+- **Selección de Método Manual**: ComboBox para elegir Euler o RK4
+- **Entrenamiento Completo**: Optimización automática con el modo y método seleccionados
+- **Modo Paso a Paso (Manual)**: Permite ejecutar un paso de integración y visualizar gradientes y pesos
+- **Visualización Dinámica**: Curva de pérdida y visualización gráfica de la red y sus pesos en tiempo real (solo modo Manual)
+- **Interfaz Gráfica Intuitiva**: GUI desarrollada en PyQt5 con panel de control, área de resultados y visualización
 
 ### 🎨 Interfaz Gráfica
 
@@ -136,47 +132,44 @@ python "Tentativo final ecuaciones.py"
 python "Tentativo final ecuaciones.py"
 ```
 
+
 ### Interfaz de Usuario
 
 1. **Configurar Parámetros**:
    - Tasa de aprendizaje (η): 0.01 - 1.0
    - Épocas: 1000 - 10000
-   - Método: Euler, RK2, o RK4
+   - Modo: Manual, Keras, SciPy ODE
+   - Método (solo Manual): Euler o RK4
 
 2. **Entrenar Red**:
-   - Clic en "Entrenar Red" para optimización completa
-   - Observar curva de convergencia en tiempo real
+   - Clic en "Entrenar / Ejecutar" para optimización completa
+   - Visualizar curva de pérdida y, en modo Manual, la red y sus pesos
 
-3. **Modo Educativo**:
-   - Usar "Un Paso de Integración" para análisis detallado
-   - Visualizar gradientes y actualizaciones paso a paso
+3. **Modo Paso a Paso (Manual)**:
+   - Usar "Un Paso (solo Manual)" para ejecutar un paso de integración
+   - Visualizar gradientes y pesos actualizados
 
-4. **Análisis**:
-   - Comparar diferentes métodos
-   - Evaluar precisión y velocidad de convergencia
+4. **Resetear**:
+   - Clic en "Resetear" para reiniciar el estado interno y la interfaz
 
 ### Ejemplo de Uso Programático
 
 ```python
 from Tentativo_final_ecuaciones import SimpleNN
 
-# Crear red con método RK4
+# Crear red con método RK4 (Manual)
 nn = SimpleNN(eta=0.1, epochs=2000, method="RK4")
-
-# Entrenar
 predictions = nn.train()
-
-# Evaluar resultados
 print(f"Pérdida final: {nn.loss_history[-1]:.6f}")
 print(f"Predicciones: {predictions}")
 ```
 
 ## 📊 Resultados Esperados
 
+
 ### Convergencia Típica
 
 - **Euler**: Convergencia lenta, posible inestabilidad con η alto
-- **RK2**: Convergencia más suave, mejor estabilidad
 - **RK4**: Convergencia rápida y estable, mayor costo computacional
 
 ### Métricas de Rendimiento
@@ -184,27 +177,26 @@ print(f"Predicciones: {predictions}")
 ```
 Método | Precisión Final | Épocas para 99% | Estabilidad
 -------|----------------|-----------------|------------
-Euler  | 95-98%         | 3000-5000      | Media
-RK2    | 98-99%         | 2000-3000      | Alta
-RK4    | 99-100%        | 1000-2000      | Muy Alta
+Euler  | 95-98%         | 3000-5000       | Media
+RK4    | 99-100%        | 1000-2000       | Muy Alta
 ```
 
 ## 🧪 Ejemplos de Experimentos
+
 
 ### Comparación de Métodos
 
 ```python
 # Configuración experimental
-methods = ["Euler", "RK2", "RK4"]
+methods = ["Euler", "RK4"]
 learning_rates = [0.05, 0.1, 0.2]
 epochs = 2000
 
-# Ejecutar comparaciones y analizar resultados
 for method in methods:
-    for lr in learning_rates:
-        nn = SimpleNN(eta=lr, epochs=epochs, method=method)
-        predictions = nn.train()
-        # Analizar convergencia...
+   for lr in learning_rates:
+      nn = SimpleNN(eta=lr, epochs=epochs, method=method)
+      predictions = nn.train()
+      # Analizar convergencia...
 ```
 
 ## 📁 Estructura del Proyecto
@@ -243,7 +235,7 @@ self.b2 = np.zeros((1, 1))       # Sesgos salida
 | Método | η (Tasa de Aprendizaje) | Épocas | Observaciones |
 |--------|-------------------------|--------|---------------|
 | Euler  | 0.05 - 0.1             | 3000+ | Reducir η si hay inestabilidad |
-| RK2    | 0.1 - 0.2              | 2000+ | Balance óptimo |
+| RK4    | 0.1 - 0.3              | 1500+ | Permite η más altos |
 | RK4    | 0.1 - 0.3              | 1500+ | Permite η más altos |
 
 ## 📖 Fundamentos Teóricos
@@ -274,6 +266,7 @@ Las contribuciones son bienvenidas. Por favor:
 3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
 5. Crear un Pull Request
+
 
 ### Áreas de Mejora
 

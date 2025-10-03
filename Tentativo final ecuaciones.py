@@ -1,14 +1,4 @@
-"""
-Red Neuronal XOR con EDOs y Métodos de Integración Numérica
-===========================================================
 
-Proyecto mejorado que implementa una red neuronal para el problema XOR usando:
-- Modo Manual: Métodos Euler y RK4 implementados a mano.
-- Modo Keras: Entrenamiento usando tensorflow.keras.
-- Modo SciPy ODE: Integración de dW/dt = -eta * grad L(W) con solve_ivp.
-
-Incluye interfaz gráfica con PyQt5 y visualización de curva de pérdida.
-"""
 
 import sys
 import numpy as np
@@ -45,9 +35,7 @@ except Exception as e:
 # Implementación manual (SimpleNN) - métodos numéricos hechos a mano
 # --------------------------
 class SimpleNN:
-    """
-    Red neuronal simple para XOR con métodos de integración manuales (Euler, RK4).
-    """
+    """Red neuronal simple para XOR con métodos de integración manuales (Euler, RK4)."""
     def __init__(self, eta: float = 0.1, epochs: int = 2000, method: str = "Euler") -> None:
         # XOR data
         self.X = np.array([[0,0],[0,1],[1,0],[1,1]], dtype=float)
@@ -257,7 +245,8 @@ class NNApp(QMainWindow):
 
         # Buttons
         btn_layout = QHBoxLayout()
-        self.train_btn = QPushButton("Entrenar / Ejecutar")
+
+        self.train_btn = QPushButton("Entrenar rápido")
         self.train_btn.clicked.connect(self.train_network)
         btn_layout.addWidget(self.train_btn)
 
@@ -265,16 +254,29 @@ class NNApp(QMainWindow):
         self.step_btn.clicked.connect(self.one_step)
         btn_layout.addWidget(self.step_btn)
 
+        self.epoch_btn = QPushButton("Siguiente época (interactivo)")
+        self.epoch_btn.clicked.connect(self.next_epoch)
+        btn_layout.addWidget(self.epoch_btn)
+
+        self.pause_btn = QPushButton("Pausa")
+        self.pause_btn.clicked.connect(self.pause_training)
+        btn_layout.addWidget(self.pause_btn)
+
         self.reset_btn = QPushButton("Resetear")
         self.reset_btn.clicked.connect(self.reset_network)
         btn_layout.addWidget(self.reset_btn)
+
+        # Frecuencia de actualización de la visualización
+        self.update_freq_label = QLabel("Frecuencia actualización gráfica:")
+        self.update_freq_input = QLineEdit("100")
+        btn_layout.addWidget(self.update_freq_label)
+        btn_layout.addWidget(self.update_freq_input)
 
         layout.addLayout(btn_layout)
 
         self.results = QTextEdit()
         self.results.setReadOnly(True)
         layout.addWidget(self.results)
-
 
         # Plotting: curva de pérdida
         self.figure = Figure(figsize=(6,3))
@@ -295,13 +297,94 @@ class NNApp(QMainWindow):
         self.keras_model = None
         self.keras_loss_history = []
         self.scipy_solution = None
+        self.interactive_training = False
+        self.current_epoch = 0
+        self.max_epochs = 0
+        self.training_paused = False
+        self.reset_network()
+        mode = self.mode_combo.currentText()
+        if mode != "Manual":
+            self.results.setText("El modo interactivo está disponible solo en Modo Manual.")
+            return
+        try:
+            eta = float(self.lr_input.text())
+            epochs = int(self.epochs_input.text())
+        except ValueError:
+            self.results.setText("Parámetros inválidos (η y épocas deben ser numéricos).")
+            return
+        method = self.method_combo.currentText()
+        if self.manual_nn is None or self.max_epochs != epochs:
+            self.manual_nn = SimpleNN(eta=eta, epochs=epochs, method=method)
+            self.manual_nn.loss_history = []
+            self.current_epoch = 0
+            self.max_epochs = epochs
+        if self.current_epoch < self.max_epochs:
+            loss, _, _ = self.manual_nn.step()
+            self.manual_nn.loss_history.append(float(loss))
+            self.draw_nn_weights(self.manual_nn.W1, self.manual_nn.b1, self.manual_nn.W2, self.manual_nn.b2)
+            self.current_epoch += 1
+            txt = self.results.toPlainText()
+            txt += f"\nÉpoca {self.current_epoch}/{self.max_epochs} - Loss: {loss:.8f}"
+            self.results.setText(txt)
+            # plot curva de pérdida
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
+            ax.plot(self.manual_nn.loss_history, label=f"Manual {method}")
+            ax.set_title(f"Pérdida (interactivo)")
+            ax.set_xlabel("Épocas")
+            ax.set_ylabel("MSE")
+            ax.legend()
+            ax.grid(True)
+            self.canvas.draw()
+        else:
+            self.results.setText("Entrenamiento interactivo finalizado.")
+
+    def pause_training(self):
+    # Pausa el entrenamiento interactivo automático.
+        self.training_paused = True
+        self.results.setText("Entrenamiento pausado. Puedes continuar con 'Siguiente época'.")
+
+    def next_epoch(self):
+        # Ejecuta la siguiente época en modo interactivo (solo Manual)
+        mode = self.mode_combo.currentText()
+        if mode != "Manual":
+            self.results.setText("El modo interactivo está disponible solo en Modo Manual.")
+            return
+        try:
+            eta = float(self.lr_input.text())
+            epochs = int(self.epochs_input.text())
+        except ValueError:
+            self.results.setText("Parámetros inválidos (η y épocas deben ser numéricos).")
+            return
+        method = self.method_combo.currentText()
+        if self.manual_nn is None or self.max_epochs != epochs:
+            self.manual_nn = SimpleNN(eta=eta, epochs=epochs, method=method)
+            self.manual_nn.loss_history = []
+            self.current_epoch = 0
+            self.max_epochs = epochs
+        if self.current_epoch < self.max_epochs:
+            loss, _, _ = self.manual_nn.step()
+            self.manual_nn.loss_history.append(float(loss))
+            self.draw_nn_weights(self.manual_nn.W1, self.manual_nn.b1, self.manual_nn.W2, self.manual_nn.b2)
+            self.current_epoch += 1
+            txt = self.results.toPlainText()
+            txt += f"\nÉpoca {self.current_epoch}/{self.max_epochs} - Loss: {loss:.8f}"
+            self.results.setText(txt)
+            # plot curva de pérdida
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
+            ax.plot(self.manual_nn.loss_history, label=f"Manual {method}")
+            ax.set_title(f"Pérdida (interactivo)")
+            ax.set_xlabel("Épocas")
+            ax.set_ylabel("MSE")
+            ax.legend()
+            ax.grid(True)
+            self.canvas.draw()
+        else:
+            self.results.setText("Entrenamiento interactivo finalizado.")
 
     def draw_nn_weights(self, W1, b1, W2, b2, activations=None):
-        """
-        Dibuja la red neuronal y los pesos actuales.
-        W1: (2,3), b1: (1,3), W2: (3,1), b2: (1,1)
-        activations: opcional, lista de activaciones por nodo
-        """
+    # Dibuja la red neuronal y los pesos actuales.
         self.nn_fig.clear()
         ax = self.nn_fig.add_subplot(111)
         ax.axis('off')
@@ -347,48 +430,66 @@ class NNApp(QMainWindow):
         self.nn_canvas.draw()
 
     def train_network(self) -> None:
-        """
-        Ejecuta el entrenamiento según el modo seleccionado.
-        """
+        # Optimización: desactiva botones durante entrenamiento
+        self.train_btn.setEnabled(False)
+        self.step_btn.setEnabled(False)
+        self.epoch_btn.setEnabled(False)
+        self.pause_btn.setEnabled(False)
+        self.reset_btn.setEnabled(False)
         mode = self.mode_combo.currentText()
         try:
             eta = float(self.lr_input.text())
             epochs = int(self.epochs_input.text())
+            update_freq = int(self.update_freq_input.text())
         except ValueError:
-            self.results.setText("Parámetros inválidos (η y épocas deben ser numéricos).")
+            self.results.setText("Parámetros inválidos (η, épocas o frecuencia deben ser numéricos).")
+            self.train_btn.setEnabled(True)
+            self.step_btn.setEnabled(True)
+            self.epoch_btn.setEnabled(True)
+            self.pause_btn.setEnabled(True)
+            self.reset_btn.setEnabled(True)
             return
 
         if mode == "Manual":
             method = self.method_combo.currentText()
             self.manual_nn = SimpleNN(eta=eta, epochs=epochs, method=method)
             self.manual_nn.loss_history = []
-            # Visualización dinámica de pesos
-            for epoch in range(self.manual_nn.epochs):
-                loss, _, _ = self.manual_nn.step()
-                self.manual_nn.loss_history.append(float(loss))
-                # Dibuja red y pesos cada 50 épocas o en la última
-                if epoch % max(1, self.manual_nn.epochs//100) == 0 or epoch == self.manual_nn.epochs-1:
-                    self.draw_nn_weights(self.manual_nn.W1, self.manual_nn.b1, self.manual_nn.W2, self.manual_nn.b2)
+            self.current_epoch = 0
+            self.max_epochs = epochs
+            self.training_paused = False
+            # Entrenamiento en bloques para eficiencia
+            while self.current_epoch < self.max_epochs and not self.training_paused:
+                block = min(update_freq, self.max_epochs - self.current_epoch)
+                for _ in range(block):
+                    loss, _, _ = self.manual_nn.step()
+                    self.manual_nn.loss_history.append(float(loss))
+                    self.current_epoch += 1
+                self.draw_nn_weights(self.manual_nn.W1, self.manual_nn.b1, self.manual_nn.W2, self.manual_nn.b2)
+                self.results.append(f"Época {self.current_epoch}/{self.max_epochs} - Loss: {loss:.8f}")
+                # plot curva de pérdida (solo últimas N)
+                self.figure.clear()
+                ax = self.figure.add_subplot(111)
+                N = 200
+                ax.plot(self.manual_nn.loss_history[-N:], label=f"Manual {method}")
+                ax.set_title(f"Pérdida (interactivo)")
+                ax.set_xlabel("Épocas")
+                ax.set_ylabel("MSE")
+                ax.legend()
+                ax.grid(True)
+                self.canvas.draw()
             outputs = self.manual_nn.forward()[3]
             preds = (outputs > 0.5).astype(int)
-            txt = f"Manual mode ({method}) - Resultados finales:\n"
+            self.results.append(f"Manual mode ({method}) - Resultados finales:")
             for i in range(len(self.manual_nn.X)):
-                txt += f"{self.manual_nn.X[i]} -> pred: {int(preds[i][0])} (real {int(self.manual_nn.y[i][0])}) [{outputs[i][0]:.3f}]\n"
-            txt += f"\nÚltima pérdida: {self.manual_nn.loss_history[-1]:.8f}\n"
-            self.results.setText(txt)
-
-            # plot curva de pérdida
-            self.figure.clear()
-            ax = self.figure.add_subplot(111)
-            ax.plot(self.manual_nn.loss_history, label=f"Manual {method}")
-            ax.set_title(f"Pérdida ({mode} - {method})")
-            ax.set_xlabel("Épocas")
-            ax.set_ylabel("MSE")
-            ax.legend()
-            ax.grid(True)
-            self.canvas.draw()
-
-        elif mode == "Keras":
+                self.results.append(f"{self.manual_nn.X[i]} -> pred: {int(preds[i][0])} (real {int(self.manual_nn.y[i][0])}) [{outputs[i][0]:.3f}]")
+            self.results.append(f"Última pérdida: {self.manual_nn.loss_history[-1]:.8f}")
+        # Reactiva botones
+        self.train_btn.setEnabled(True)
+        self.step_btn.setEnabled(True)
+        self.epoch_btn.setEnabled(True)
+        self.pause_btn.setEnabled(True)
+        self.reset_btn.setEnabled(True)
+        if mode == "Keras":
             # Visualización de pesos no implementada para Keras por diferencias de API
             if not TF_OK or tf is None:
                 self.results.setText("TensorFlow / Keras no está disponible en este entorno.")
@@ -431,7 +532,6 @@ class NNApp(QMainWindow):
                 self.canvas.draw()
             except Exception as ex:
                 self.results.setText(f"Error ejecutando Keras: {ex}")
-
         elif mode == "SciPy ODE":
             # Visualización de pesos no implementada para SciPy ODE por diferencias de API
             if not (TF_OK and SCIPY_OK) or tf is None or solve_ivp is None:
@@ -497,14 +597,11 @@ class NNApp(QMainWindow):
                 self.canvas.draw()
             except Exception as ex:
                 self.results.setText(f"Error ejecutando SciPy ODE: {ex}")
-
         else:
             self.results.setText("Modo no reconocido.")
 
     def one_step(self) -> None:
-        """
-        Ejecuta un paso manual (solo modo Manual).
-        """
+    # Ejecuta un paso manual (solo modo Manual).
         mode = self.mode_combo.currentText()
         if mode != "Manual":
             self.results.setText("El modo 'Un paso' está disponible solo en Modo Manual.")
@@ -541,14 +638,16 @@ class NNApp(QMainWindow):
         self.canvas.draw()
 
     def reset_network(self) -> None:
-        """
-        Reinicia el estado interno y la interfaz.
-        """
+    # Reinicia el estado interno y la interfaz.
         # reset all internal objects
         self.manual_nn = None
         self.keras_model = None
         self.keras_loss_history = []
         self.scipy_solution = None
+        self.interactive_training = False
+        self.current_epoch = 0
+        self.max_epochs = 0
+        self.training_paused = False
         self.results.clear()
         self.figure.clear()
         self.canvas.draw()
@@ -559,9 +658,7 @@ class NNApp(QMainWindow):
 # Main
 # --------------------------
 if __name__ == "__main__":
-    """
-    Punto de entrada principal de la aplicación.
-    """
+    # Main entry point
     app = QApplication(sys.argv)
     window = NNApp()
     window.show()
