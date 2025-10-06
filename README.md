@@ -309,12 +309,3 @@ Si tienes preguntas, sugerencias o encuentras algún problema:
 *Proyecto desarrollado como trabajo final para la materia de Ecuaciones Diferenciales*
 
 </div>
-
-## 🌐 Interfaz Web (opcional)
-
-Si desea ejecutar una versión web basada en Streamlit para demostraciones rápidas, instale `streamlit` y ejecute el script correspondiente (si existe en el repo). La interfaz de escritorio PyQt6 sigue siendo la recomendada para trabajo interactivo y educativo.
-
-```powershell
-pip install streamlit
-python -m streamlit run app_streamlit.py  # si el fichero está presente
-```
