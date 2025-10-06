@@ -1,7 +1,7 @@
 # Red Neuronal XOR con Métodos de Integración Numérica
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyQt5](https://img.shields.io/badge/PyQt5-5.15+-green.svg)](https://pypi.org/project/PyQt5/)
+[![PyQt6](https://img.shields.io/badge/PyQt6-6.x+-green.svg)](https://pypi.org/project/PyQt6/)
 [![NumPy](https://img.shields.io/badge/NumPy-1.21+-orange.svg)](https://numpy.org/)
 [![Matplotlib](https://img.shields.io/badge/Matplotlib-3.5+-red.svg)](https://matplotlib.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -79,7 +79,7 @@ Entrada (2) → Capa Oculta (3) → Salida (1)
 - **Entrenamiento Completo**: Optimización automática con el modo y método seleccionados
 - **Modo Paso a Paso (Manual)**: Permite ejecutar un paso de integración y visualizar gradientes y pesos
 - **Visualización Dinámica**: Curva de pérdida y visualización gráfica de la red y sus pesos en tiempo real (solo modo Manual)
-- **Interfaz Gráfica Intuitiva**: GUI desarrollada en PyQt5 con panel de control, área de resultados y visualización
+- **Interfaz Gráfica Intuitiva (Principal)**: GUI desarrollada en PyQt6 con panel de control, área de resultados y visualización. La aplicación de escritorio PyQt6 es la interfaz recomendada para exploración interactiva y visualizaciones en tiempo real.
 
 ### 🎨 Interfaz Gráfica
 
@@ -96,66 +96,69 @@ Entrada (2) → Capa Oculta (3) → Salida (1)
 - Python 3.8 o superior
 - pip (gestor de paquetes de Python)
 
-### Dependencias
+### Dependencias (recomendado)
 
-```bash
-pip install numpy matplotlib PyQt5
+Instale las dependencias principales para la versión PyQt6:
+
+```powershell
+pip install numpy matplotlib PyQt6
 ```
 
-O usando el archivo de requerimientos:
+Si prefiere usar un archivo de requerimientos, puede crear o usar `requirements-pyqt.txt` y ejecutar:
 
-```bash
-pip install -r requirements.txt
+```powershell
+pip install -r requirements-pyqt.txt
 ```
 
-### Instalación Manual
+### Instalación Manual (rápida)
 
-```bash
+```powershell
 # Clonar el repositorio
 git clone https://github.com/NicoAV2311/final_ecuaciones_diferenciales.git
 
 # Navegar al directorio
 cd final_ecuaciones_diferenciales
 
-# Instalar dependencias
-pip install -r requirements.txt
+# Instalar dependencias (PyQt6)
+pip install -r requirements-pyqt.txt  # o pip install numpy matplotlib PyQt6
 
-# Ejecutar la aplicación
-python "Tentativo final ecuaciones.py"
+# Ejecutar la aplicación PyQt6 (ventana de escritorio)
+python "app_pyqt6.py"
 ```
 
 ## 🎮 Uso
 
-### Ejecución Básica
+### Ejecución Básica (PyQt6)
 
-```bash
-python "Tentativo final ecuaciones.py"
+Ejecute la interfaz de escritorio PyQt6:
+
+```powershell
+python "app_pyqt6.py"
 ```
 
+La ventana mostrará controles para la tasa de aprendizaje, número de épocas y método (Euler o RK4). La pestaña "Red y pesos" permite inspeccionar los pesos y su evolución durante el entrenamiento.
 
-### Interfaz de Usuario
+
+### Interfaz de Usuario (PyQt6)
 
 1. **Configurar Parámetros**:
-   - Tasa de aprendizaje (η): 0.01 - 1.0
-   - Épocas: 1000 - 10000
-   - Modo: Manual, Keras, SciPy ODE
-   - Método (solo Manual): Euler o RK4
+   - Tasa de aprendizaje (η): por ejemplo 0.01 - 0.3
+   - Épocas: 200 - 10000
+   - Método de integración (Manual): Euler o RK4
+   - Frecuencia de actualización gráfica: controla cada cuántas épocas se refresca la vista (p. ej. 10–200)
 
-2. **Entrenar Red**:
-   - Clic en "Entrenar / Ejecutar" para optimización completa
-   - Visualizar curva de pérdida y, en modo Manual, la red y sus pesos
+2. **Entrenar la red**:
+   - Pulsa "Entrenar red" para iniciar el entrenamiento en un hilo de fondo.
+   - Observa la curva de pérdida y la pestaña "Red y pesos" para ver cómo cambian los pesos en tiempo real.
 
-3. **Modo Paso a Paso (Manual)**:
-   - Usar "Un Paso (solo Manual)" para ejecutar un paso de integración
-   - Visualizar gradientes y pesos actualizados
-
-4. **Resetear**:
-   - Clic en "Resetear" para reiniciar el estado interno y la interfaz
+3. **Detener / Resetear**:
+   - "Detener" interrumpe el entrenamiento en curso.
+   - "Resetear" limpia la interfaz y el estado interno.
 
 ### Ejemplo de Uso Programático
 
 ```python
-from Tentativo_final_ecuaciones import SimpleNN
+from app_pyqt6 import SimpleNN
 
 # Crear red con método RK4 (Manual)
 nn = SimpleNN(eta=0.1, epochs=2000, method="RK4")
@@ -199,23 +202,20 @@ for method in methods:
       # Analizar convergencia...
 ```
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto (resumen)
 
 ```
 final_ecuaciones_diferenciales/
 │
-├── Tentativo final ecuaciones.py    # Archivo principal
+├── app_pyqt6.py                     # Interfaz de escritorio PyQt6 (recomendada)
+├── Tentativo final ecuaciones.py    # Versión original / archivo legacy
 ├── README.md                        # Este archivo
-├── requirements.txt                 # Dependencias
-├── LICENSE                         # Licencia del proyecto
+├── requirements-pyqt.txt            # Dependencias para la versión PyQt6
+├── LICENSE                          # Licencia del proyecto
 │
-├── docs/                           # Documentación adicional
-│   ├── mathematical_background.md  # Fundamentos matemáticos
-│   └── user_guide.md              # Guía detallada de usuario
-│
-└── examples/                       # Ejemplos y experimentos
-    ├── comparison_analysis.py      # Análisis comparativo
-    └── parameter_tuning.py         # Optimización de parámetros
+└── docs/                            # Documentación adicional
+   ├── mathematical_background.md   # Fundamentos matemáticos
+   └── user_guide.md               # Guía detallada de usuario
 ```
 
 ## 🔧 Configuración Avanzada
@@ -279,7 +279,7 @@ Las contribuciones son bienvenidas. Por favor:
 ### Recursos Adicionales
 
 - [Documentación NumPy](https://numpy.org/doc/)
-- [PyQt5 Documentation](https://doc.qt.io/qtforpython/)
+- [PyQt6 / Qt for Python Documentation](https://doc.qt.io/qtforpython/)
 - [Matplotlib Gallery](https://matplotlib.org/stable/gallery/)
 
 ## 📄 Licencia
@@ -310,43 +310,11 @@ Si tienes preguntas, sugerencias o encuentras algún problema:
 
 </div>
 
-## 🌐 Interfaz Web con Streamlit
+## 🌐 Interfaz Web (opcional)
 
-A partir de la versión 2025, el proyecto incluye una interfaz web interactiva desarrollada con **Streamlit**. Esta versión permite ejecutar y visualizar el entrenamiento de la red neuronal XOR directamente en el navegador, con una experiencia moderna y responsiva.
+Si desea ejecutar una versión web basada en Streamlit para demostraciones rápidas, instale `streamlit` y ejecute el script correspondiente (si existe en el repo). La interfaz de escritorio PyQt6 sigue siendo la recomendada para trabajo interactivo y educativo.
 
-### 🚀 Instalación y Ejecución de la App Web
-
-#### 1. Instalar Streamlit
-
-```bash
+```powershell
 pip install streamlit
+python -m streamlit run app_streamlit.py  # si el fichero está presente
 ```
-
-#### 2. Ejecutar la aplicación web
-
-```bash
-streamlit run app_streamlit.py
-```
-
-> Si el comando `streamlit` no funciona, prueba:
-> ```bash
-> python -m streamlit run app_streamlit.py
-> ```
-
-#### 3. Acceder desde el navegador
-
-Por defecto, Streamlit abrirá la app en [http://localhost:8501](http://localhost:8501)
-
-### 🎨 Características Visuales
-- Parámetros de entrenamiento en panel lateral
-- Tabs para curva de pérdida, resultados finales y visualización de la red
-- Apariencia mejorada con CSS personalizado
-- Responsive y fácil de usar
-
-### 📦 Archivos relevantes
-- `app_streamlit.py`: Código principal de la app web
-- `requirements.txt`: Incluye `streamlit` como dependencia
-
-### 🖼️ Ejemplo visual
-
-![Streamlit Demo](https://streamlit.io/images/brand/streamlit-mark-color.png)
