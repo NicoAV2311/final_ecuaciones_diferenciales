@@ -1,19 +1,52 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import io
+import base64
 
 # CSS personalizado para mejorar apariencia
 def local_css():
     st.markdown("""
         <style>
-        .main-title {color: #1f77b4; font-size: 2.5rem; font-weight: bold; text-align: center; margin-bottom: 1rem;}
-        .sidebar .sidebar-content {background: #f0f4f8;}
-        .result-box {background: #eaf6ff; border-radius: 10px; padding: 1rem; margin-bottom: 1rem;}
-        .stTabs [data-baseweb="tab"] {background: #eaf6ff; border-radius: 10px 10px 0 0;}
+        .main-title {color: #1f77b4; font-size: 2.2rem; font-weight: 700; text-align: center; margin-bottom: 0.8rem;}
+        .sidebar .sidebar-content {background: #f8fbff;}
+        /* Result box content forced to dark text for readability */
+        .result-box {background: #eaf6ff; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; color: #000 !important;}
+        .result-box, .result-box * {color: #000 !important;}
+        /* Tabs: base style and active state */
+        .stTabs [data-baseweb="tab"] {background: #eaf6ff; border-radius: 10px 10px 0 0; color: #000 !important;}
+        .stTabs [data-baseweb="tab"][aria-selected="true"] {background: #1f77b4 !important; color: #ffffff !important;}
+    /* Improve contrast for selectboxes and labels */
+    /* Specific class for a white label above a selectbox */
+    .white-label {color: #ffffff !important; font-weight: 600;}
+    /* Make selectbox text white (this will affect selectboxes) */
+    .stSelectbox, .stSelectbox * {color: #ffffff !important;}
+        /* Make markdown headers darker inside the app */
+        .streamlit-expanderHeader, .css-18e3th9, .stMarkdown {color: #000 !important}
         </style>
     """, unsafe_allow_html=True)
 
 local_css()
+
+
+def fig_to_base64_png_html(fig, div_class="result-box", width=700):
+    """Render a matplotlib figure to a base64 PNG and return an HTML div with the image embedded.
+
+    This keeps the image inside the same HTML block so Streamlit's separate element outputs
+    don't leave an empty wrapper div in the DOM inspector.
+    """
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    data = base64.b64encode(buf.read()).decode('utf-8')
+    html = f'<div class="{div_class}"><img src="data:image/png;base64,{data}" style="max-width:100%; height:auto;"/></div>'
+    return html
+
+def text_to_html_block(text_lines, div_class="result-box"):
+    escaped = "\n".join([str(line) for line in text_lines])
+    # use <pre> to preserve formatting
+    html = f'<div class="{div_class}"><pre style="color:inherit; background:transparent; border:none;">{escaped}</pre></div>'
+    return html
 
 # --------------------------
 # Implementación manual (SimpleNN) - métodos numéricos hechos a mano
@@ -130,7 +163,9 @@ with col1:
     st.header("Parámetros de entrenamiento")
     eta = st.number_input("Tasa de aprendizaje (η)", min_value=0.001, max_value=2.0, value=0.1, step=0.01)
     epochs = st.number_input("Épocas", min_value=1, max_value=20000, value=5000, step=100)
-    method = st.selectbox("Método de integración", ["Euler", "RK4"])
+    # render a styled HTML label (white) and keep the actual selectbox label empty
+    st.markdown('<div class="white-label">Método de integración</div>', unsafe_allow_html=True)
+    method = st.selectbox("", ["Euler", "RK4"], key="method_select")
     update_freq = st.number_input("Frecuencia de actualización gráfica", min_value=1, max_value=1000, value=100, step=1)
     run_btn = st.button("Entrenar red")
     reset_btn = st.button("Resetear red")
@@ -152,7 +187,6 @@ with col2:
                 loss, _, _ = nn.step()
                 nn.loss_history.append(float(loss))
         with tabs[0]:
-            st.markdown('<div class="result-box">', unsafe_allow_html=True)
             fig, ax = plt.subplots()
             ax.plot(nn.loss_history[-N:], label=f"{method}")
             ax.set_title("Curva de pérdida (últimas N)")
@@ -160,17 +194,17 @@ with col2:
             ax.set_ylabel("MSE")
             ax.legend()
             ax.grid(True)
-            st.pyplot(fig)
-            st.markdown('</div>', unsafe_allow_html=True)
+            html = fig_to_base64_png_html(fig)
+            st.markdown(html, unsafe_allow_html=True)
         outputs = nn.forward()[3]
         preds = (outputs > 0.5).astype(int)
         with tabs[1]:
-            st.markdown('<div class="result-box">', unsafe_allow_html=True)
-            st.subheader("Resultados finales")
+            lines = ["Resultados finales"]
             for i in range(len(nn.X)):
-                st.write(f"{nn.X[i]} → pred: {int(preds[i][0])} (real {int(nn.y[i][0])}) [{outputs[i][0]:.3f}]")
-            st.write(f"Última pérdida: {nn.loss_history[-1]:.8f}")
-            st.markdown('</div>', unsafe_allow_html=True)
+                lines.append(f"{nn.X[i]} → pred: {int(preds[i][0])} (real {int(nn.y[i][0])}) [{outputs[i][0]:.3f}]")
+            lines.append(f"Última pérdida: {nn.loss_history[-1]:.8f}")
+            html = text_to_html_block(lines)
+            st.markdown(html, unsafe_allow_html=True)
         st.session_state.nn = nn
         st.session_state.loss_history = nn.loss_history
         st.session_state.outputs = outputs
@@ -178,7 +212,6 @@ with col2:
         nn = st.session_state.nn
         W1, b1, W2, b2 = nn.W1, nn.b1, nn.W2, nn.b2
         with tabs[2]:
-            st.markdown('<div class="result-box">', unsafe_allow_html=True)
             fig, ax = plt.subplots(figsize=(6,3))
             ax.axis('off')
             x_in, y_in = [0.1]*2, [0.3, 0.7]
@@ -207,5 +240,5 @@ with col2:
                 ax.text((x_hid[j]+x_out[0])/2, (y_hid[j]+y_out[0])/2, f'{w:.2f}', fontsize=8)
             ax.set_xlim(0,1)
             ax.set_ylim(0,1)
-            st.pyplot(fig)
-            st.markdown('</div>', unsafe_allow_html=True)
+            html = fig_to_base64_png_html(fig)
+            st.markdown(html, unsafe_allow_html=True)
