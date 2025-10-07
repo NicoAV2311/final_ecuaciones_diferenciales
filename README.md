@@ -293,6 +293,11 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 - Universidad: Universidad Catolica Luis Amigo
 - Materia: Ecuaciones Diferenciales
 
+**Juan Jose Restrepo Zuluaga**
+- GitHub: [@juanjo201332](https://github.com/juanjo201332)
+- Universidad: Universidad Catolica Luis Amigo
+- Materia: Ecuaciones Diferenciales
+
 ## 📞 Contacto
 
 Si tienes preguntas, sugerencias o encuentras algún problema:
